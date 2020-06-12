@@ -34,41 +34,18 @@ app.post('/', (req, res, next) => {
     console.log(`CUSTOM EMOJI! ${statusEmoji}`);
     status = nodeEmoji.strip(status);
   }
-  // additional tokens
-  const dndToken = '[DND]';
-  const awayToken = '[AWAY]';
+  
   // parse event start/stop time
   const dateFormat = 'MMM D, YYYY [at] hh:mmA';
   const start = moment(req.body.start, dateFormat);
   const end = moment(req.body.end, dateFormat);
-  // check for DND
-  if (status.includes(dndToken)) {
-    slack.dnd.setSnooze({
-      token,
-      num_minutes: end.diff(start, 'minutes')
-    });
-    status = status.replace(dndToken, '').trim();
-  }
-  // check for AWAY
-  slack.users.setPresence({
+  
+  // apply do not disturb
+  slack.dnd.setSnooze({
     token,
-    presence: status.includes(awayToken) ? 'away' : 'auto'
+    num_minutes: end.diff(start, 'minutes')
   });
-  if (status.includes(awayToken)) {
-    status = status.replace(awayToken, '').trim();
-  }
-  // set status
-  status = `${status} from ${start.format('h:mm')} to ${end.format('h:mm a')} ${process.env.TIME_ZONE}`;
-  let profile = JSON.stringify({
-    "status_text": status,
-    "status_emoji": statusEmoji,
-    "status_expiration": end.unix()
-  });
-  console.log(profile);
-  slack.users.profile.set({ token, profile });
-  console.log(`Status set as "${status}" and will expire at ${end.format('h:mm a')}`);
-  res.status(200);
-  res.send('🤘');
+  status = status.replace(dndToken, '').trim();
 });
 
 app.get('/', (req, res, next) => {
